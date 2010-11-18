@@ -80,6 +80,8 @@ def handleBook(book):
 	if getChildrenByTagName(book, 'quote'):
 		for quote in getChildrenByTagName(book, 'quote'):
 			output += handleQuote(quote)
+	else:
+		output += u'<p align="center" style="font-size: 40px">✠</p>'
 	
 	parts = getChildrenByTagName(book, 'part')
 	if parts:
@@ -114,6 +116,8 @@ def handlePart(part):
 	if getChildrenByTagName(part, 'quote'):
 		for quote in getChildrenByTagName(part, 'quote'):
 			output += handleQuote(quote)
+	else:
+		output += u'<p align="center" style="font-size: 40px">✠</p>'
 	
 	# Chapters
 	for chapter in getChildrenByTagName(part, 'chapter'):
