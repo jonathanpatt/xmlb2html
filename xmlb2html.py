@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# XMLB to HTML Converter v0.2
-# Supports XMLB 0.2 and up ONLY
-
 import xml.dom.minidom
 from xml.dom.minidom import Node
 import os.path
