@@ -182,8 +182,6 @@ def handleChapterInternals(chapter, level = 1):
 				output += '</p>'
 			elif e.nodeName == 'quote':
 				output += handleQuote(e)
-				if level == 1:
-					output += '<br/><br />'
 			elif e.nodeName == 'code':
 				output += '<pre>' + e.firstChild.data +'</pre>'
 			elif e.nodeName == 'table':
