@@ -13,6 +13,7 @@ import time
 
 footnotes = {}
 footnote_id = 0
+head = [u"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n<head>\n <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\n  <title>", "</title>\n<style type=\"text/css\" media=\"screen\">h1, h2, h3, p#subtitle, p.subtitle, p#author, p#publication_date, p#title, p.title, div#dedication { text-align: center; } p, p.title + p, p.subtitle + p, p#author, p#publication_date, p#title, p#subtitle { margin: 0; text-indent: 0; } p + p { text-indent: 1.5em; } p.subtitle + p, { text-indent: 0 } h1 + div.quote, p.title + div.quote, p.subtitle + div.quote { margin-top: 2em, margin-bottom: 2em } div.quote p.source, div.inter_quote p.source { text-align: right; } p#subtitle, p.subtitle { font-variant: small-caps; margin-bottom: 1em } .smallcaps { font-variant: small-caps; } img { display: block; margin-left: auto; margin-right: auto; } div#dedication, p#publication_date, p#author { margin-top: 2em; margin-bottom: 2em } br.page_break { page-break-after: always; } h1 { margin-top: 0px } sup { font-size: 0.75em; line-height: 0.5em } sub { font-size: 0.75em; line-height: .75em } p.aligned + p { text-indent: 0 } p.outdent { margin-left: 1.5em; text-indent: -1.5em !important } div.inter_quote { font-size: .8em; margin-top: 1em; margin-bottom: 1em; text-align: justify; } div.quote { margin-top: 1em; margin-bottom: 1em; text-align: justify; margin-left: 1.25em; margin-right: 1.25em } .book_glyph { margin-top: 30px; text-align: center; font-size: 6em; } </style>\n</head>\n<body>\n    "]
 
 
 # FUNCTIONS
@@ -359,98 +360,99 @@ def returnFootnotes():
     
     return output
 
-    
-# Load XMLB file
-try:
-    in_path = sys.argv[1]
-except:
-    exit("Error: You must provide an XMLB file as an argument")
+# Main
+def main():
+    # Load XMLB file
+    try:
+        in_path = sys.argv[1]
+    except:
+        exit("Error: You must provide an XMLB file as an argument")
 
-# Parse XML
-try:
-    doc = xml.dom.minidom.parse(in_path)
-except:
-    exit("Error: Unable to parse XML")
+    # Parse XML
+    try:
+        doc = xml.dom.minidom.parse(in_path)
+    except:
+        exit("Error: Unable to parse XML")
 
-# HTML header
-head = [u"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n<head>\n <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\n  <title>", "</title>\n<style type=\"text/css\" media=\"screen\">h1, h2, h3, p#subtitle, p.subtitle, p#author, p#publication_date, p#title, p.title, div#dedication { text-align: center; } p, p.title + p, p.subtitle + p, p#author, p#publication_date, p#title, p#subtitle { margin: 0; text-indent: 0; } p + p { text-indent: 1.5em; } p.subtitle + p, { text-indent: 0 } h1 + div.quote, p.title + div.quote, p.subtitle + div.quote { margin-top: 2em, margin-bottom: 2em } div.quote p.source, div.inter_quote p.source { text-align: right; } p#subtitle, p.subtitle { font-variant: small-caps; margin-bottom: 1em } .smallcaps { font-variant: small-caps; } img { display: block; margin-left: auto; margin-right: auto; } div#dedication, p#publication_date, p#author { margin-top: 2em; margin-bottom: 2em } br.page_break { page-break-after: always; } h1 { margin-top: 0px } sup { font-size: 0.75em; line-height: 0.5em } sub { font-size: 0.75em; line-height: .75em } p.aligned + p { text-indent: 0 } p.outdent { margin-left: 1.5em; text-indent: -1.5em !important } div.inter_quote { font-size: .8em; margin-top: 1em; margin-bottom: 1em; text-align: justify; } div.quote { margin-top: 1em; margin-bottom: 1em; text-align: justify; margin-left: 1.25em; margin-right: 1.25em } .book_glyph { margin-top: 30px; text-align: center; font-size: 6em; } </style>\n</head>\n<body>\n    "]
+    # Initialize output
+    output = u""
 
-# Initialize output
-output = u""
+    # Get XMLB element
+    try:
+        xmlb = doc.getElementsByTagName("xmlb")[0]
+    except:
+        exit("Error: File missing mandatory top level <xmlb> tag")
 
-# Get XMLB element
-try:
-    xmlb = doc.getElementsByTagName("xmlb")[0]
-except:
-    exit("Error: File missing mandatory top level <xmlb> tag")
+    # Ensure XMLB version >= 0.2
+    try:
+        if float(xmlb.getAttribute("version")) < 0.2:
+            exit("Error: XMLB version must be 0.2 or greater")
+    except:
+        exit("Error: XMLB version not provided")
 
-# Ensure XMLB version >= 0.2
-try:
-    if float(xmlb.getAttribute("version")) < 0.2:
-        exit("Error: XMLB version must be 0.2 or greater")
-except:
-    exit("Error: XMLB version not provided")
-
-# If XMLB file is volume with multiple books
-topLevelElement = getChildrenByTagName(xmlb, 'volume')
-if topLevelElement:
-    topLevelElement = topLevelElement[0]
-    
-    # Process title, author, dedication, volume-level quote(s)
-    output += setBookInfo(topLevelElement, 'volume')
-    
-    # Process volume-level chapters, if they exist
-    chapters = getChildrenByTagName(topLevelElement, 'chapter')
-    if chapters:
-        for chapter in chapters:
-            output += handleChapter(chapter)
-    
-    # Process books
-    for book in getChildrenByTagName(topLevelElement, 'book'):
-        # Book num and title
-        if book.getAttribute('num'):
-            output += '<h1 class="book_title">Book ' + book.getAttribute('num') + '</h1>'
-            try:
-                output += '<p class="subtitle">' + handlePChildren(getChildrenByTagName(book, 'title')[0].childNodes) + '</p>'
-            except:
-                exit("Error: Missing book <title> tag")
-        
-        # Book title on its own
-        else:
-            try:
-                output += '<h1>' + handlePChildren(getChildrenByTagName(book, 'title')[0].childNodes) + '</h1>'
-            except:
-                exit("Error: Missing book <title> tag")
-        
-        # Book subtitle if it exists
-        subtitle = getChildrenByTagName(book, 'subtitle')
-        if subtitle:
-            output += '<p class="subtitle">' + d(subtitle) + '</p>'
-        
-        # Process book contents
-        output += handleBook(book)
-
-# If XMLB file is single book
-else:
-    topLevelElement = getChildrenByTagName(xmlb, 'book')
+    # If XMLB file is volume with multiple books
+    topLevelElement = getChildrenByTagName(xmlb, 'volume')
     if topLevelElement:
         topLevelElement = topLevelElement[0]
-        
-        # Process title, author, dedication, book-level quote(s)
-        output += setBookInfo(topLevelElement, 'book')
-        
-        # Process book contents
-        output += handleBook(topLevelElement)
+
+        # Process title, author, dedication, volume-level quote(s)
+        output += setBookInfo(topLevelElement, 'volume')
+
+        # Process volume-level chapters, if they exist
+        chapters = getChildrenByTagName(topLevelElement, 'chapter')
+        if chapters:
+            for chapter in chapters:
+                output += handleChapter(chapter)
+
+        # Process books
+        for book in getChildrenByTagName(topLevelElement, 'book'):
+            # Book num and title
+            if book.getAttribute('num'):
+                output += '<h1 class="book_title">Book ' + book.getAttribute('num') + '</h1>'
+                try:
+                    output += '<p class="subtitle">' + handlePChildren(getChildrenByTagName(book, 'title')[0].childNodes) + '</p>'
+                except:
+                    exit("Error: Missing book <title> tag")
+
+            # Book title on its own
+            else:
+                try:
+                    output += '<h1>' + handlePChildren(getChildrenByTagName(book, 'title')[0].childNodes) + '</h1>'
+                except:
+                    exit("Error: Missing book <title> tag")
+
+            # Book subtitle if it exists
+            subtitle = getChildrenByTagName(book, 'subtitle')
+            if subtitle:
+                output += '<p class="subtitle">' + d(subtitle) + '</p>'
+
+            # Process book contents
+            output += handleBook(book)
+
+    # If XMLB file is single book
     else:
-        exit("Error: Missing top level <volume> or <book> tag")
+        topLevelElement = getChildrenByTagName(xmlb, 'book')
+        if topLevelElement:
+            topLevelElement = topLevelElement[0]
 
-# HTML footer
-output += "\n</body>\n</html>"
+            # Process title, author, dedication, book-level quote(s)
+            output += setBookInfo(topLevelElement, 'book')
 
-# Write output to HTML file in same directory as XMLB file
-out_path = os.path.dirname(in_path) + "/" + string.split(os.path.basename(in_path), ".")[0] + ".html"
-f = codecs.open(out_path, "w", "utf-8")
-f.write(output)
-f.close()
+            # Process book contents
+            output += handleBook(topLevelElement)
+        else:
+            exit("Error: Missing top level <volume> or <book> tag")
 
-print "Done!"
+    # HTML footer
+    output += "\n</body>\n</html>"
+
+    # Write output to HTML file in same directory as XMLB file
+    out_path = os.path.dirname(in_path) + "/" + string.split(os.path.basename(in_path), ".")[0] + ".html"
+    f = codecs.open(out_path, "w", "utf-8")
+    f.write(output)
+    f.close()
+
+    print "Done!"
+
+if __name__ == '__main__':
+    main()
