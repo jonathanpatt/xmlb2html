@@ -57,7 +57,7 @@ def setBookInfo(topLevelElement, topLevelElementName):
     # Publication Date
     try:
         publication_date = d(getChildrenByTagName(topLevelElement, 'publication_date'))
-        output += '<p id="publication_date">published ' + time.strftime("%d %B %Y", time.strptime(publication_date, "%Y-%m-%d")) + '</p>'
+        output += '<p id="publication_date">' + publication_date.split('-', 1)[0] + '</p>'
     except:
         exit("Error: Missing or invalid " + topLevelElementName + " <publication_date> tag")
     
