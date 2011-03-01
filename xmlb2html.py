@@ -1,4 +1,3 @@
-#!/usr/bin/env python3.1.4
 # -*- coding: utf-8 -*-
 
 import xml.dom.minidom
