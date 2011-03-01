@@ -14,6 +14,9 @@ footnotes = {}
 footnote_id = 0
 head = [u"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n<head>\n <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\n  <title>", "</title>\n<style type=\"text/css\" media=\"screen\">h1, h2, h3, p#subtitle, p.subtitle, p#author, p#publication_date, p#title, p.title, div#dedication { text-align: center; } p, p.title + p, p.subtitle + p, p#author, p#publication_date, p#title, p#subtitle { margin: 0; text-indent: 0; } p + p { text-indent: 1.5em; } p.subtitle + p, { text-indent: 0 } h1 + div.quote, p.title + div.quote, p.subtitle + div.quote { margin-top: 2em, margin-bottom: 2em } div.quote p.source, div.inter_quote p.source { text-align: right; } p#subtitle, p.subtitle { font-variant: small-caps; margin-bottom: 1em } .smallcaps { font-variant: small-caps; } img { display: block; margin-left: auto; margin-right: auto; } div#dedication, p#publication_date, p#author { margin-top: 2em; margin-bottom: 2em } br.page_break { page-break-after: always; } h1 { margin-top: 0px } sup { font-size: 0.75em; line-height: 0.5em } sub { font-size: 0.75em; line-height: .75em } p.aligned + p { text-indent: 0 } p.outdent { margin-left: 1.5em; text-indent: -1.5em !important } div.inter_quote { font-size: .8em; margin-top: 1em; margin-bottom: 1em; text-align: justify; } div.quote { margin-top: 1em; margin-bottom: 1em; text-align: justify; margin-left: 1.25em; margin-right: 1.25em } .book_glyph { margin-top: 30px; text-align: center; font-size: 6em; } </style>\n</head>\n<body>\n    "]
 
+# CONSTANTS
+PAGE_BREAK = '<br class="page_break"/>'
+
 
 # FUNCTIONS
 
@@ -63,15 +66,15 @@ def setBookInfo(topLevelElement, topLevelElementName):
     # Dedication if it exists
     dedication = getChildrenByTagName(topLevelElement, 'dedication')
     if dedication:
-        bookInfoOutput.append('<div id="dedication">' + handlePChildren(dedication[0].childNodes) + '</div><br class="page_break" />')
+        bookInfoOutput.append('<div id="dedication">' + handlePChildren(dedication[0].childNodes) + '</div>' + PAGE_BREAK)
     
     # Quotes if they exist
     if topLevelElementName == 'volume':
         if getChildrenByTagName(topLevelElement, 'quote'):
-            bookInfoOutput.append('<br class="page_break" />')
+            bookInfoOutput.append(PAGE_BREAK)
             for quote in getChildrenByTagName(topLevelElement, 'quote'):
                 bookInfoOutput.append(handleQuote(quote))
-            bookInfoOutput.append('<br class="page_break" />')
+            bookInfoOutput.append(PAGE_BREAK)
     
     return ''.join(bookInfoOutput)
 
@@ -158,7 +161,7 @@ def handleChapter(chapter):
     
     # Add forced page break if chapter has no heading
     if not headingOutput:
-        headingOutput.append('<br class="page_break" />')
+        headingOutput.append(PAGE_BREAK)
     
     # Process chapter content
     chapterOutput.append(''.join(headingOutput))
