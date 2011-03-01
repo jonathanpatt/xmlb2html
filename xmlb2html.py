@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# XMLB to HTML Converter v0.2
-# Supports XMLB 0.2 and up ONLY
-
 import xml.dom.minidom
 from xml.dom.minidom import Node
 import os.path
@@ -15,10 +12,16 @@ import time
 
 footnotes = {}
 footnote_id = 0
+head = [u"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n<head>\n <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\n  <title>", "</title>\n<style type=\"text/css\" media=\"screen\">h1, h2, h3, p#subtitle, p.subtitle, p#author, p#publication_date, p#title, p.title, div#dedication { text-align: center; } p, p.title + p, p.subtitle + p, p#author, p#publication_date, p#title, p#subtitle { margin: 0; text-indent: 0; } p + p { text-indent: 1.5em; } p.subtitle + p, { text-indent: 0 } h1 + div.quote, p.title + div.quote, p.subtitle + div.quote { margin-top: 2em, margin-bottom: 2em } div.quote p.source, div.inter_quote p.source { text-align: right; } p#subtitle, p.subtitle { font-variant: small-caps; margin-bottom: 1em } .smallcaps { font-variant: small-caps; } img { display: block; margin-left: auto; margin-right: auto; } div#dedication, p#publication_date, p#author { margin-top: 2em; margin-bottom: 2em } br.page_break { page-break-after: always; } h1 { margin-top: 0px } sup { font-size: 0.75em; line-height: 0.5em } sub { font-size: 0.75em; line-height: .75em } p.aligned + p { text-indent: 0 } p.outdent { margin-left: 1.5em; text-indent: -1.5em !important } div.inter_quote { font-size: .8em; margin-top: 1em; margin-bottom: 1em; text-align: justify; } div.quote { margin-top: 1em; margin-bottom: 1em; text-align: justify; margin-left: 1.25em; margin-right: 1.25em } .section_glyph { padding-top: 60px; text-align: center; font-size: 40px; text-indent: 0px; } </style>\n</head>\n<body>\n    "]
+
+# CONSTANTS
+PAGE_BREAK = '<br class="page_break"/>'
+SECTION_GLYPH = u'<p class="section_glyph">✠</p>'
 
 
 # FUNCTIONS
 
+# Get all children of a node by tag name
 def getChildrenByTagName(obj, tag):
     matches = []
     for o in obj.childNodes:
@@ -30,265 +33,306 @@ def getChildrenByTagName(obj, tag):
 def d(input):
     if len(input) > 0:
         return input[0].firstChild.data
-    
-def setBookInfo(tle, tle_name):
-    output = u''
-    # Book Title
-    try:
-        title = getChildrenByTagName(tle, 'title')
-        output += head[0] + d(title) + head[1]
-        output += '<h1 id="title">' + handlePChildren(title[0].childNodes) + '</h1>'
-    except:
-        exit("Error: Missing " + tle_name + " <title> tag.")
-    
-    # Book Subtitle If Exists
-    subtitle = getChildrenByTagName(tle, 'subtitle')
-    if d(subtitle):
-        output += '<p id="subtitle">' + handlePChildren(subtitle[0].childNodes) + "</p>" # TODO: Make this work with enclosed italics, etc.
-    
-    # Book Author
-    try:
-        output += '<p id="author"><i>by</i> ' + handlePChildren(getChildrenByTagName(tle, 'author')[0].childNodes) + '</p>'
-    except:
-        exit("Error: Missing " + tle_name + " <author> tag.")
-    
-    # try:
-    #       publication_date = d(getChildrenByTagName(tle, 'publication_date'))
-    #       output += '<p id="publication_date">published ' + time.strftime("%d %B %Y", time.strptime(publication_date, "%Y-%m-%d")) + '</p>'
-    #   except:
-    #       exit("Error: Missing or invalid " + tle_name + " <publication_date> tag.")
-    
-    # Book Dedication If Exists
-    dedication = getChildrenByTagName(tle, 'dedication')
-    if dedication:
-        output += '<div id="dedication">' + handlePChildren(dedication[0].childNodes) + '</div><br class="page_break" />'
-    
-    # Book Quotes If Exist
-    if tle_name == 'volume':
-        if getChildrenByTagName(tle, 'quote'):
-            output += '<br class="page_break" />'
-            for quote in getChildrenByTagName(tle, 'quote'):
-                output += handleQuote(quote)
-            output += '<br class="page_break" />'
-    
-    return output
 
-def handleBook(book):
-    output = ''
+# Process title, author, dedication, quote(s)
+def setBookInfo(topLevelElement, topLevelElementName):
+    bookInfoOutput = []
     
-    # Quotes If Exist
+    # Title
+    try:
+        title = getChildrenByTagName(topLevelElement, 'title')
+        bookInfoOutput.append(head[0] + d(title) + head[1])
+        bookInfoOutput.append('<h1 id="title">' + handlePChildren(title[0].childNodes) + '</h1>')
+    except:
+        exit("Error: Missing " + topLevelElementName + " <title> tag")
+    
+    # Subtitle if it exists
+    subtitle = getChildrenByTagName(topLevelElement, 'subtitle')
+    if d(subtitle):
+        bookInfoOutput.append('<p id="subtitle">' + handlePChildren(subtitle[0].childNodes) + '</p>')
+    
+    # Author
+    try:
+        bookInfoOutput.append('<p id="author"><i>by</i> ' + handlePChildren(getChildrenByTagName(topLevelElement, 'author')[0].childNodes) + '</p>')
+    except:
+        exit("Error: Missing " + topLevelElementName + " <author> tag")
+    
+    # Publication date
+    try:
+        publicationDate = d(getChildrenByTagName(topLevelElement, 'publication_date'))
+        publicationDate = publicationDate.split('-')
+        
+        if len(publicationDate) == 1:
+            publicationDate = publicationDate[0]
+        elif len(publicationDate) == 2:
+            publicationDate = time.strftime("%B", time.strptime(publicationDate[1], "%m")) + ' ' + publicationDate[0]
+        elif len(publicationDate) == 3:
+            publicationDate = publicationDate[2] + ' ' + time.strftime("%B", time.strptime(publicationDate[1], "%m")) + ' ' + publicationDate[0]
+        else:
+            raise
+            
+        bookInfoOutput.append('<p id="publication_date">' + publicationDate + '</p>')
+    except:
+        exit('Error: Missing or invalid ' + topLevelElementName + ' <publication_date> tag')
+    
+    # Dedication if it exists
+    dedication = getChildrenByTagName(topLevelElement, 'dedication')
+    if dedication:
+        bookInfoOutput.append('<div id="dedication">' + handlePChildren(dedication[0].childNodes) + '</div>' + PAGE_BREAK)
+    
+    # Quotes if they exist
+    if topLevelElementName == 'volume':
+        if getChildrenByTagName(topLevelElement, 'quote'):
+            bookInfoOutput.append(PAGE_BREAK)
+            for quote in getChildrenByTagName(topLevelElement, 'quote'):
+                bookInfoOutput.append(handleQuote(quote))
+            bookInfoOutput.append(PAGE_BREAK)
+    
+    return ''.join(bookInfoOutput)
+
+# Process book contents
+def handleBook(book):
+    bookOutput = []
+    
+    # Quotes if they exist
     if getChildrenByTagName(book, 'quote'):
         for quote in getChildrenByTagName(book, 'quote'):
-            output += handleQuote(quote)
+            bookOutput.append(handleQuote(quote))
     else:
-        output += u'<p align="center" style="font-size: 40px; text-indent: 0px;">✠</p>'
+        bookOutput.append(SECTION_GLYPH)
     
+    # If book is made up of parts
     parts = getChildrenByTagName(book, 'part')
     if parts:
+        # Process pre-part chapters
         chapters = getChildrenByTagName(book, 'chapter')
         if chapters:
             for chapter in chapters:
-                output += handleChapter(chapter)
+                bookOutput.append(handleChapter(chapter))
+        
+        # Process parts
         for part in parts:
-            output += handlePart(part)
+            bookOutput.append(handlePart(part))
+            
+    # If book is just chapters, no parts
     else:
+        # Process chapters
         for chapter in getChildrenByTagName(book, 'chapter'):
-            output += handleChapter(chapter)
+            bookOutput.append(handleChapter(chapter))
         
-    return output
+    return ''.join(bookOutput)
 
+# Process part contents
 def handlePart(part):
-    output = ''
+    partOutput = []
     
-    # Part Num & Title
+    # Number
     if part.getAttribute('num'):
-        output += '<h1 class="part_title">Part ' + part.getAttribute('num') + '</h1>'
+        partOutput.append('<h1 class="part_title">Part ' + part.getAttribute('num') + '</h1>')
     else:
-        exit("Error: Missing num attribute in <part> tag.")
-        
-    if getChildrenByTagName(part, 'title'):
-        output += '<p class="subtitle">' + handlePChildren(getChildrenByTagName(part, 'title')[0].childNodes) + '</p>'
-        
-    if getChildrenByTagName(part, 'subtitle'):
-        output += '<p class="subtitle">' + handlePChildren(getChildrenByTagName(part, 'subtitle')[0].childNodes) + '</p>'
+        exit("Error: Missing num attribute in <part> tag")
     
-    # Quotes If Exist
+    # Title if it exists
+    if getChildrenByTagName(part, 'title'):
+        partOutput.append('<p class="subtitle">' + handlePChildren(getChildrenByTagName(part, 'title')[0].childNodes) + '</p>')
+    
+    # Subtitle if it exists
+    if getChildrenByTagName(part, 'subtitle'):
+        partOutput.append('<p class="subtitle">' + handlePChildren(getChildrenByTagName(part, 'subtitle')[0].childNodes) + '</p>')
+    
+    # Quotes if they exist
     if getChildrenByTagName(part, 'quote'):
         for quote in getChildrenByTagName(part, 'quote'):
-            output += handleQuote(quote)
+            partOutput.append(handleQuote(quote))
     else:
-        output += u'<p align="center" style="font-size: 40px; text-indent: 0px;">✠</p>'
+        partOutput.append(SECTION_GLYPH)
     
     # Chapters
     for chapter in getChildrenByTagName(part, 'chapter'):
-        output += handleChapter(chapter)
+        partOutput.append(handleChapter(chapter))
     
-    return output
+    return ''.join(partOutput)
 
+# Process chapter
 def handleChapter(chapter):
-    output = ''
+    chapterOutput = []
     
-    # Chapter Num & Title
-    heading = ''
+    # Number, title and subtitle
+    headingOutput = []
     if chapter.getAttribute('num'):
-        heading += '<h1 class="chapter_title">Chapter ' + chapter.getAttribute('num') + '</h1>'
+        headingOutput.append('<h1 class="chapter_title">Chapter ' + chapter.getAttribute('num') + '</h1>')
         if getChildrenByTagName(chapter, 'title'):
-            heading += '<p class="subtitle">' + handlePChildren(getChildrenByTagName(chapter, 'title')[0].childNodes) + '</p>'
+            headingOutput.append('<p class="subtitle">' + handlePChildren(getChildrenByTagName(chapter, 'title')[0].childNodes) + '</p>')
         if getChildrenByTagName(chapter, 'subtitle'):
-            heading += '<p class="subtitle">' + handlePChildren(getChildrenByTagName(chapter, 'subtitle')[0].childNodes) + '</p>'
+            headingOutput.append('<p class="subtitle">' + handlePChildren(getChildrenByTagName(chapter, 'subtitle')[0].childNodes) + '</p>')
     else:
         if getChildrenByTagName(chapter, 'title'):
-            heading += '<h1 class="chapter_title">' + handlePChildren(getChildrenByTagName(chapter, 'title')[0].childNodes) + '</h1>'
+            headingOutput.append('<h1 class="chapter_title">' + handlePChildren(getChildrenByTagName(chapter, 'title')[0].childNodes) + '</h1>')
         if getChildrenByTagName(chapter, 'subtitle'):
-            heading += '<p class="subtitle">' + handlePChildren(getChildrenByTagName(chapter, 'subtitle')[0].childNodes) + '</p>'
+            headingOutput.append('<p class="subtitle">' + handlePChildren(getChildrenByTagName(chapter, 'subtitle')[0].childNodes) + '</p>')
     
-    if heading == '':
-        heading = '<br class="page_break" />'
+    # Add forced page break if chapter has no heading
+    if not headingOutput:
+        headingOutput.append(PAGE_BREAK)
     
-    output += heading
+    # Process chapter content
+    chapterOutput.append(''.join(headingOutput))
+    chapterOutput.append(handleChapterInternals(chapter))
+    chapterOutput.append(returnFootnotes())
     
-    output += handleChapterInternals(chapter)
-    
-    output += returnFootnotes()
-    
-    return output
+    return ''.join(chapterOutput)
 
+# Process chapter content
 def handleChapterInternals(chapter, level = 1):
-    output = ''
+    chapterInternalsOutput = []
     
     for e in chapter.childNodes:
         if e.nodeType == 3:
-            output += e.data
+            chapterInternalsOutput.append(e.data)
         elif e.nodeType == 1:
             if e.nodeName == 'subtitle':
                 if level > 1:
-                    exit("Error: Invalid location for a subtitle.")
+                    exit("Error: Invalid location for a subtitle")
             elif e.nodeName == 'title':
                 if level > 1:
-                    output += '<h3>' + handlePChildren(e.childNodes) + '</h3>'
+                    chapterInternalsOutput.append('<h3>' + handlePChildren(e.childNodes) + '</h3>')
             elif e.nodeName == 'p':
-                attributes = ''
+                pAttributes = []
                 if e.getAttribute('align'):
-                    attributes = ' class="aligned" align="' + e.getAttribute('align') + '"'
+                    pAttributes.append(' class="aligned" align="' + e.getAttribute('align') + '"')
                 
                 if e.getAttribute('outdent'):
                     if e.getAttribute('outdent') == 'true':
-                        attributes += ' class="outdent"'
+                        pAttributes.append(' class="outdent"')
                 
-                output += '<p' + attributes + '>'
+                chapterInternalsOutput.append('<p' + ''.join(pAttributes) + '>')
                 
-                output += handlePChildren(e.childNodes)
+                chapterInternalsOutput.append(handlePChildren(e.childNodes))
                 
-                output += '</p>'
+                chapterInternalsOutput.append('</p>')
             elif e.nodeName == 'quote':
-                output += handleQuote(e)
+                chapterInternalsOutput.append(handleQuote(e))
             elif e.nodeName == 'code':
-                output += '<pre>' + e.firstChild.data +'</pre>'
+                chapterInternalsOutput.append('<pre>' + e.firstChild.data +'</pre>')
             elif e.nodeName == 'table':
-                output += handleTable(e)
+                chapterInternalsOutput.append(handleTable(e))
             elif e.nodeName == 'hr':
-                output += '<hr />'
+                chapterInternalsOutput.append('<hr />')
             elif e.nodeName == 'subchapter':
-                output += handleChapterInternals(e, level + 1)
+                chapterInternalsOutput.append(handleChapterInternals(e, level + 1))
             else:
-                exit("Error: <" + e.nodeName + "> used in invalid location.")
+                exit("Error: <" + e.nodeName + "> used in invalid location")
                 
-    if chapter.nodeName == 'subchapter': output += '<br/> <br />'
+    if chapter.nodeName == 'subchapter':
+        chapterInternalsOutput.append('<br/> <br />')
     
-    return output
-    
+    return ''.join(chapterInternalsOutput)
+
+# Process table
 def handleTable(table):
-    output = '<table>'
+    tableOutput = ['<table>']
     for row in getChildrenByTagName(table, 'row'):
-        output += '<tr>'
+        tableOutput.append('<tr>')
         for column in getChildrenByTagName(row, 'column'):
             attributes = ''
             if column.getAttribute('align'):
                 attributes += ' align="' + column.getAttribute('align') + '"'
-            output += '<td valign="top"' + attributes + '>' + handlePs(column) + '</td>'
-        output += '</tr>'
-    output += '</table>'
+            tableOutput.append('<td valign="top"' + attributes + '>' + handlePs(column) + '</td>')
+        tableOutput.append('</tr>')
+    tableOutput.append('</table>')
     
-    return output
+    return ''.join(tableOutput)
 
+# Process quote
 def handleQuote(quote):
-    output = ''
+    quoteOutput = []
     
-    attributes = ''
     if quote.getAttribute('type'):
         if quote.getAttribute('type') == 'inter':
-            output += '<table width="100%"><tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><div class="inter_quote">'
+            quoteOutput.append('<table width="100%"><tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td><div class="inter_quote">')
         else:
-            exit("Error: Unknown <quote> type.")
+            exit("Error: Unknown <quote> type")
     else:
-        output += '<div class="quote">'
-    output += handlePs(quote)
+        quoteOutput.append('<div class="quote">')
+        
+    quoteOutput.append(handlePs(quote))
     
-    # Quote Source If Exists 
+    # Quote source if it exists
     source = getChildrenByTagName(quote, 'source')
     if source:
-        output += u'<p class="source">—' + handlePChildren(source[0].childNodes) + '</p>'
+        quoteOutput.append(u'<p class="source">—' + handlePChildren(source[0].childNodes) + '</p>')
     
     if quote.getAttribute('type'):
         if quote.getAttribute('type') == 'inter':
-            output += '</div></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr></table>'
+            quoteOutput.append('</div></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr></table>')
     else:
-        output += '</div>'
+        quoteOutput.append('</div>')
     
-    return output
+    return ''.join(quoteOutput)
 
+# Process paragraphs
 def handlePs(ps, attributes = '', prefix = ''):
-    output = ""
-    if attributes != '': attributes = ' ' + attributes
+    pOutput = []
+    
+    if attributes != '':
+        attributes = ' ' + attributes
+    
     for p in getChildrenByTagName(ps, 'p'):
         if p.getAttribute('align'):
             if p.getAttribute('align') == 'right' or p.getAttribute('align') == 'center':
                 attributes += ' class="aligned" align="' + p.getAttribute('align') + '"'
             else:
-                exit('Error: Unknown <p> align position.')
+                exit('Error: Unknown <p> align position')
+                
         if p.getAttribute('outdent'):
             if p.getAttribute('outdent') == 'true':
                 attributes += ' class="outdent"'
-        output += '<p' + attributes + '>'
         
-        if prefix != '': output += prefix
+        pOutput.append('<p' + attributes + '>')
         
-        output += handlePChildren(p.childNodes)
+        if prefix != '':
+            pOutput.append(prefix)
+        
+        pOutput.append(handlePChildren(p.childNodes))
             
-        output += '</p>'
+        pOutput.append('</p>')
         attributes = ''
-    return output
+        
+    return ''.join(pOutput)
 
+# Process the children of paragraphs
 def handlePChildren(c):
     global footnotes
     global footnote_id
-    output = ''
+    
+    pChildrenOutput = []
+    
     for child in c:
         if child.nodeType == 3:
-            output += child.nodeValue
+            pChildrenOutput.append(child.nodeValue)
         elif child.nodeType == 1:
             if child.nodeName == 'b' or child.nodeName == 'em' or child.nodeName == 'i' or child.nodeName == 'strong' or child.nodeName == 'sup' or child.nodeName == 'sub' or child.nodeName == 'u':
-                output += '<' + child.nodeName + '>'
+                pChildrenOutput.append('<' + child.nodeName + '>')
                 try:
                     if child.childNodes:
-                        output += handlePChildren(child.childNodes)
+                        pChildrenOutput.append(handlePChildren(child.childNodes))
                     else:
-                        output += child.firstChild.data
+                        pChildrenOutput.append(child.firstChild.data)
                 except:
-                    output += handlePChildren(child.childNodes)
-                output += '</' + child.nodeName + '>'
+                    pChildrenOutput.append(handlePChildren(child.childNodes))
+                pChildrenOutput.append('</' + child.nodeName + '>')
             elif child.nodeName == 'br':
-                output += '<br />'
+                pChildrenOutput.append('<br />')
             elif child.nodeName == 'sc':
-                output += '<span class="smallcaps">'
+                pChildrenOutput.append('<span class="smallcaps">')
                 try:
                     if child.childNodes:
-                        output += handlePChildren(child.childNodes)
+                        pChildrenOutput.append(handlePChildren(child.childNodes))
                     else:
-                        output += child.firstChild.data
+                        pChildrenOutput.append(child.firstChild.data)
                 except:
-                    output += handlePChildren(child.childNodes)
-                output += '</span>'
+                    pChildrenOutput.append(handlePChildren(child.childNodes))
+                pChildrenOutput.append('</span>')
             elif child.nodeName == 'footnote':
                 footnote_id += 1
                 
@@ -300,124 +344,139 @@ def handlePChildren(c):
                 except:
                     footnotes[footnote_id] = handlePChildren(child.childNodes)
                 
-                output += '<sup><a id="footnote_' + str(footnote_id) + '_backlink" href="#footnote_' + str(footnote_id) + '">[' + str(len(footnotes)) + ']</a></sup>'
+                pChildrenOutput.append('<sup><a id="footnote_' + str(footnote_id) + '_backlink" href="#footnote_' + str(footnote_id) + '">[' + str(len(footnotes)) + ']</a></sup>')
             elif child.nodeName == 'img':
                 try:
                     imgname = child.getAttribute('name')
                 except:
-                    error("Error: <img> missing name attribute.")
-                output += '<img src="images/' + imgname + '" />'
+                    error("Error: <img> missing name attribute")
+                pChildrenOutput.append('<img src="images/' + imgname + '" />')
             elif child.nodeName == 'code':
-                output += '<tt>'
+                pChildrenOutput.append('<tt>')
                 
                 try:
                     if child.childNodes:
-                        output += handlePChildren(child.childNodes)
+                        pChildrenOutput.append(handlePChildren(child.childNodes))
                     else:
-                        output += child.firstChild.data
+                        pChildrenOutput.append(child.firstChild.data)
                 except:
-                    output += handlePChildren(child.childNodes)
+                    pChildrenOutput.append(handlePChildren(child.childNodes))
                 
-                output += '</tt>'
+                pChildrenOutput.append('</tt>')
             else:
                 exit("Error: <" + child.nodeName + "> is not an allowed tag in <p>: " + child.toxml())
                 
-    return output
+    return ''.join(pChildrenOutput)
 
+# Process and return footnotes
 def returnFootnotes():
     global footnotes
-    output = ''
+    
+    footnotesOutput = []
     if footnotes:
-        output += '<hr />'
+        footnotesOutput.append('<hr />')
         i = 1
         for k, v in footnotes.iteritems():
-            output += '<p class="outdent"><a id="footnote_' + str(k) + '" href="#footnote_' + str(k) + '_backlink">' + str(i) + '</a> ' + v + '<br /><br /></p>'
+            footnotesOutput.append('<p class="outdent"><a id="footnote_' + str(k) + '" href="#footnote_' + str(k) + '_backlink">' + str(i) + '</a> ' + v + '<br /><br /></p>')
             i = i + 1
-        output += ''
-    
+        
         footnotes = {}
     
-    return output
-    
-# Load Book
+    return ''.join(footnotesOutput)
 
-try:
-    in_path = sys.argv[1]
-except:
-    exit("Error: You must provide an XMLB file as an argument.")
+# Main
+def main():
+    # Load XMLB file
+    try:
+        in_path = sys.argv[1]
+    except:
+        exit("Error: You must provide an XMLB file as an argument")
 
-try:
-    doc = xml.dom.minidom.parse(in_path)
-except:
-    exit("Error: Unable to parse XML.")
+    # Parse XML
+    try:
+        doc = xml.dom.minidom.parse(in_path)
+    except:
+        exit("Error: Unable to parse XML")
 
-# HTML Header
+    # Initialize output
+    output = []
 
-head = [u"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n<head>\n <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\n  <title>", "</title>\n<style type=\"text/css\" media=\"screen\">h1, h2, h3, p#subtitle, p.subtitle, p#author, p#publication_date, p#title, p.title, div#dedication { text-align: center; } p, p.title + p, p.subtitle + p, p#author, p#publication_date, p#title, p#subtitle { margin: 0; text-indent: 0; } p + p { text-indent: 1.5em; } p.subtitle + p, { text-indent: 0 } h1 + div.quote, p.title + div.quote, p.subtitle + div.quote { margin-top: 2em, margin-bottom: 2em } div.quote p.source, div.inter_quote p.source { text-align: right; } p#subtitle, p.subtitle { font-variant: small-caps; margin-bottom: 1em } .smallcaps { font-variant: small-caps; } img { display: block; margin-left: auto; margin-right: auto; } div#dedication, p#publication_date, p#author { margin-top: 2em; margin-bottom: 2em } br.page_break { page-break-after: always; } h1 { margin-top: 0px } sup { font-size: 0.75em; line-height: 0.5em } sub { font-size: 0.75em; line-height: .75em } p.aligned + p { text-indent: 0 } p.outdent { margin-left: 1.5em; text-indent: -1.5em !important } div.inter_quote { font-size: .8em; margin-top: 1em; margin-bottom: 1em; text-align: justify; } div.quote { margin-top: 1em; margin-bottom: 1em; text-align: justify; margin-left: 1.25em; margin-right: 1.25em } .book_glyph { margin-top: 30px; text-align: center; font-size: 6em; } </style>\n</head>\n<body>\n    "]
+    # Get XMLB element
+    try:
+        xmlb = doc.getElementsByTagName("xmlb")[0]
+    except:
+        exit("Error: File missing mandatory top level <xmlb> tag")
 
-output = u""
+    # Ensure XMLB version >= 0.2
+    try:
+        if float(xmlb.getAttribute("version")) < 0.2:
+            exit("Error: XMLB version must be 0.2 or greater")
+    except:
+        exit("Error: XMLB version not provided")
 
-# Get XMLB Element
-try:
-    xmlb = doc.getElementsByTagName("xmlb")[0]
-except:
-    exit("Error: File missing mandatory top level <xmlb> tag.")
+    # If XMLB file is volume with multiple books
+    topLevelElement = getChildrenByTagName(xmlb, 'volume')
+    if topLevelElement:
+        topLevelElement = topLevelElement[0]
 
-# Ensure XMLB Version >= 0.2
-try:
-    if float(xmlb.getAttribute("version")) < 0.2:
-        exit("Error: XMLB version must be 0.2 or greater")
-except:
-    exit("Error: XMLB version not provided.")
+        # Process title, author, dedication, volume-level quote(s)
+        output.append(setBookInfo(topLevelElement, 'volume'))
 
-# Get Top Level Element
-tle = getChildrenByTagName(xmlb, 'volume')
-if tle:
-    tle = tle[0]
-    output += setBookInfo(tle, 'volume')
-    
-    chapters = getChildrenByTagName(tle, 'chapter')
-    if chapters:
-        for chapter in chapters:
-            output += handleChapter(chapter)
-    
-    for book in getChildrenByTagName(tle, 'book'):
-        # Book Num & Title
-        if book.getAttribute('num'):
-            output += '<h1 class="book_title">Book ' + book.getAttribute('num') + '</h1>'
-            try:
-                output += '<p class="subtitle">' + handlePChildren(getChildrenByTagName(book, 'title')[0].childNodes) + '</p>'
-            except:
-                exit("Error: Missing book <title> tag.")
-        else:
-            try:
-                output += '<h1>' + handlePChildren(getChildrenByTagName(book, 'title')[0].childNodes) + '</h1>'
-            except:
-                exit("Error: Missing book <title> tag.")
-        
-        #Book Subtitle If Exists
-        subtitle = getChildrenByTagName(book, 'subtitle')
-        if subtitle:
-            output += '<p class="subtitle">' + d(subtitle) + '</p>'
-        
-        output += handleBook(book)
-else:
-    tle = getChildrenByTagName(xmlb, 'book')
-    if tle:
-        tle = tle[0]
-        output += setBookInfo(tle, 'book')
-        output += handleBook(tle)
+        # Process volume-level chapters, if they exist
+        chapters = getChildrenByTagName(topLevelElement, 'chapter')
+        if chapters:
+            for chapter in chapters:
+                output.append(handleChapter(chapter))
+
+        # Process books
+        for book in getChildrenByTagName(topLevelElement, 'book'):
+            # Book num and title
+            if book.getAttribute('num'):
+                output.append('<h1 class="book_title">Book ' + book.getAttribute('num') + '</h1>')
+                try:
+                    output.append('<p class="subtitle">' + handlePChildren(getChildrenByTagName(book, 'title')[0].childNodes) + '</p>')
+                except:
+                    exit("Error: Missing book <title> tag")
+
+            # Book title on its own
+            else:
+                try:
+                    output.append('<h1>' + handlePChildren(getChildrenByTagName(book, 'title')[0].childNodes) + '</h1>')
+                except:
+                    exit("Error: Missing book <title> tag")
+
+            # Book subtitle if it exists
+            subtitle = getChildrenByTagName(book, 'subtitle')
+            if subtitle:
+                output.append('<p class="subtitle">' + d(subtitle) + '</p>')
+
+            # Process book contents
+            output.append(handleBook(book))
+
+    # If XMLB file is single book
     else:
-        exit("Error: File missing top level <volume> or <book> tag.")
+        topLevelElement = getChildrenByTagName(xmlb, 'book')
+        if topLevelElement:
+            topLevelElement = topLevelElement[0]
 
-# HTML Footer
-output += "\n</body>\n</html>"
+            # Process title, author, dedication, book-level quote(s)
+            output.append(setBookInfo(topLevelElement, 'book'))
 
-# print output
+            # Process book contents
+            output.append(handleBook(topLevelElement))
+        else:
+            exit("Error: Missing top level <volume> or <book> tag")
 
-out_path = os.path.dirname(in_path) + "/" + string.split(os.path.basename(in_path), ".")[0] + ".html"
-f = codecs.open(out_path, "w", "utf-8")
-f.write(output)
-f.close()
+    # HTML footer
+    output.append("\n</body>\n</html>")
 
-print "Done!"
+    # Write output to HTML file in same directory as XMLB file
+    out_path = os.path.dirname(in_path) + "/" + string.split(os.path.basename(in_path), ".")[0] + ".html"
+    f = codecs.open(out_path, "w", "utf-8")
+    f.write(''.join(output))
+    f.close()
+
+    print "Done!"
+
+if __name__ == '__main__':
+    main()
