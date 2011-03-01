@@ -57,12 +57,23 @@ def setBookInfo(topLevelElement, topLevelElementName):
     except:
         exit("Error: Missing " + topLevelElementName + " <author> tag")
     
-    # Publication Date
+    # Publication date
     try:
-        publication_date = d(getChildrenByTagName(topLevelElement, 'publication_date'))
-        bookInfoOutput.append('<p id="publication_date">' + publication_date.split('-', 1)[0] + '</p>')
+        publicationDate = d(getChildrenByTagName(topLevelElement, 'publication_date'))
+        publicationDate = publicationDate.split('-')
+        
+        if len(publicationDate) == 1:
+            publicationDate = publicationDate[0]
+        elif len(publicationDate) == 2:
+            publicationDate = time.strftime("%B", time.strptime(publicationDate[1], "%m")) + ' ' + publicationDate[0]
+        elif len(publicationDate) == 3:
+            publicationDate = publicationDate[2] + ' ' + time.strftime("%B", time.strptime(publicationDate[1], "%m")) + ' ' + publicationDate[0]
+        else:
+            raise
+            
+        bookInfoOutput.append('<p id="publication_date">' + publicationDate + '</p>')
     except:
-        exit("Error: Missing or invalid " + topLevelElementName + " <publication_date> tag")
+        exit('Error: Missing or invalid ' + topLevelElementName + ' <publication_date> tag')
     
     # Dedication if it exists
     dedication = getChildrenByTagName(topLevelElement, 'dedication')
