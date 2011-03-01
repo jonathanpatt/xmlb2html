@@ -49,7 +49,7 @@ def setBookInfo(topLevelElement, topLevelElementName):
     # Subtitle if it exists
     subtitle = getChildrenByTagName(topLevelElement, 'subtitle')
     if d(subtitle):
-        bookInfoOutput.append('<p id="subtitle">' + handlePChildren(subtitle[0].childNodes) + '</p>') # TODO: Make this work with enclosed italics, etc.
+        bookInfoOutput.append('<p id="subtitle">' + handlePChildren(subtitle[0].childNodes) + '</p>')
     
     # Author
     try:
