@@ -145,7 +145,7 @@ def setBookInfo(topLevelElement, topLevelElementName):
     return ''.join(bookInfoOutput)
 
 # Process book contents
-def handleBook(book):
+def handleBook(book, childOfVolume = False):
     bookOutput = []
     
     # Quotes if they exist
@@ -155,7 +155,8 @@ def handleBook(book):
             bookOutput.append(handleQuote(quote))
         bookOutput.append(PAGE_BREAK)
     else:
-        bookOutput.append(SECTION_GLYPH)
+        if childOfVolume:
+            bookOutput.append(SECTION_GLYPH)
     
     # If book is made up of parts
     parts = getChildrenByTagName(book, 'part')
@@ -535,7 +536,7 @@ def main():
                 output.append('<p class="subtitle">' + d(subtitle) + '</p>')
 
             # Process book contents
-            output.append(handleBook(book))
+            output.append(handleBook(book, True))
 
     # If XMLB file is single book
     else:
