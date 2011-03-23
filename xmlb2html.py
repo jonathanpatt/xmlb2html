@@ -113,7 +113,7 @@ def setBookInfo(topLevelElement, topLevelElementName):
         elif len(publicationDate) == 2:
             publicationDate = time.strftime("%B", time.strptime(publicationDate[1], "%m")) + ' ' + publicationDate[0]
         elif len(publicationDate) == 3:
-            publicationDate = publicationDate[2] + ' ' + time.strftime("%B", time.strptime(publicationDate[1], "%m")) + ' ' + publicationDate[0]
+            publicationDate = publicationDate[2].lstrip('0') + ' ' + time.strftime("%B", time.strptime(publicationDate[1], "%m")) + ' ' + publicationDate[0]
         else:
             raise
             
