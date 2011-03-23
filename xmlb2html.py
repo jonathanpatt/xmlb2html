@@ -150,8 +150,10 @@ def handleBook(book):
     
     # Quotes if they exist
     if getChildrenByTagName(book, 'quote'):
+        bookOutput.append(PAGE_BREAK)
         for quote in getChildrenByTagName(book, 'quote'):
             bookOutput.append(handleQuote(quote))
+        bookOutput.append(PAGE_BREAK)
     else:
         bookOutput.append(SECTION_GLYPH)
     
