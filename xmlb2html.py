@@ -417,7 +417,10 @@ def handlePChildren(c):
                 
                 try:
                     if child.childNodes:
-                        footnotes[footnote_id] = handlePChildren(child.childNodes)
+                        if getChildrenByTagName(child, 'p'):
+                            footnotes[footnote_id] = handlePs(child)
+                        else:
+                            footnotes[footnote_id] = handlePChildren(child.childNodes)
                     else:
                         footnotes[footnote_id] = child.firstChild.data
                 except:
