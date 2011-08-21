@@ -45,8 +45,10 @@ head = [u'<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"\n'
             'table.inter_quote_table{margin-top:1em;margin-bottom:1em}'
             'div.inter_quote{font-size:.8em;'
                 'text-align:justify;}'
-            'div.quote{margin-top:1em;margin-bottom:1em;text-align:justify;'
+            'div.quote,div.quote_verse{margin-top:1em;margin-bottom:1em;text-align:justify;'
                 'margin-left:1.25em;margin-right:1.25em}'
+            'div.quote_verse p{text-indent:0px}'
+            'div.quote_verse p + p{margin-top:1em}'
             'p.source{text-align: right}'
             '.section_glyph{padding-top:60px;text-align:center;font-size:40px;'
                 'text-indent:0px;}'
@@ -324,6 +326,8 @@ def handleQuote(quote):
             quoteOutput.append('<table width="100%" class="inter_quote_table">'
                     '<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>'
                     '<td><div class="inter_quote">')
+        elif quote.getAttribute('type') == 'verse':
+            quoteOutput.append('<div class="quote_verse">')
         else:
             exit("Error: Unknown <quote> type")
     else:
@@ -342,6 +346,8 @@ def handleQuote(quote):
             quoteOutput.append('</div></td>'
                     '<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>'
                     '</tr></table>')
+        elif quote.getAttribute('type') == 'verse':
+            quoteOutput.append('</div>')
     else:
         quoteOutput.append('</div>')
     
