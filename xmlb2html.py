@@ -56,7 +56,7 @@ head = [u'<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"\n'
 
 # CONSTANTS
 PAGE_BREAK = '<br class="page_break"/>'
-SECTION_GLYPH = u'<p class="section_glyph">✠</p>'
+SECTION_GLYPH = u'<p class="section_glyph">❦</p>'
 
 
 # FUNCTIONS
