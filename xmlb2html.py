@@ -285,7 +285,7 @@ def handleChapterInternals(chapter, level = 1):
                 chapterInternalsOutput.append(handleQuote(e))
             elif e.nodeName == 'code':
                 chapterInternalsOutput.append('<pre>' +
-                        e.firstChild.data +'</pre>')
+                        e.firstChild.data + '</pre>')
             elif e.nodeName == 'table':
                 chapterInternalsOutput.append(handleTable(e))
             elif e.nodeName == 'hr':
